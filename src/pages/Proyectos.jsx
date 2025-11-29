@@ -1,74 +1,70 @@
-import React, { useState } from "react";
-import { FaGithub, FaExternalLinkAlt, FaTimes, FaCode } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { db } from "../lib/firebase"; // Conexión a DB
+import { collection, getDocs, orderBy, query } from "firebase/firestore"; // Funciones DB
+import {
+  FaGithub,
+  FaExternalLinkAlt,
+  FaTimes,
+  FaCode,
+  FaSpinner,
+  FaEye,
+} from "react-icons/fa";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination, Navigation } from "swiper/modules";
+import { Pagination, Navigation, Autoplay } from "swiper/modules";
 
-// Estilos necesarios para el Swiper del modal
+// Estilos de Swiper
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
 
 const Proyectos = () => {
   const [selectedProject, setSelectedProject] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Datos Dummy (Pronto vendrán de Firebase)
-  const projects = [
-    {
-      id: 1,
-      title: "E-commerce PWA",
-      category: "Desarrollo Web",
-      tech: ["React", "Firebase", "Stripe", "Tailwind"],
-      cover: "https://placehold.co/600x400/9f1cc3/FFF?text=Cover+Tienda",
-      gallery: [
-        "https://placehold.co/800x500/9f1cc3/FFF?text=Vista+Principal",
-        "https://placehold.co/800x500/4B2C39/FFF?text=Carrito+de+Compras",
-        "https://placehold.co/800x500/E6DAF5/4B2C39?text=Panel+Admin",
-      ],
-      description:
-        "Una aplicación web progresiva completa con carrito de compras, pasarela de pagos y panel de administración en tiempo real.",
-      repoLink: "#",
-      demoLink: "#",
-    },
-    {
-      id: 2,
-      title: "Sistema de Gestión Escolar",
-      category: "Educación",
-      tech: ["Node.js", "MongoDB", "Express"],
-      cover: "https://placehold.co/600x400/4B2C39/FFF?text=School+System",
-      gallery: ["https://placehold.co/800x500/222/FFF?text=Dashboard"],
-      description:
-        "Plataforma para gestión de calificaciones y asistencia de estudiantes con roles para maestros y directivos.",
-      repoLink: "#",
-      demoLink: "#",
-    },
-    {
-      id: 3,
-      title: "Blog Literario Personal",
-      category: "Blog / CMS",
-      tech: ["Next.js", "Sanity.io"],
-      cover: "https://placehold.co/600x400/8a2be2/FFF?text=Blog+Poemas",
-      gallery: ["https://placehold.co/800x500/333/FFF?text=Lectura"],
-      description:
-        "Un espacio minimalista para publicar poemas y cuentos, optimizado para SEO y lectura cómoda.",
-      repoLink: "#",
-      demoLink: "#",
-    },
-    {
-      id: 4,
-      title: "App de Clima",
-      category: "API Integration",
-      tech: ["JavaScript", "OpenWeatherMap"],
-      cover: "https://placehold.co/600x400/blue/FFF?text=Weather+App",
-      gallery: ["https://placehold.co/800x500/blue/FFF?text=Lluvia"],
-      description:
-        "Aplicación que consume una API externa para mostrar el clima en tiempo real según la geolocalización.",
-      repoLink: "#",
-      demoLink: "#",
-    },
-  ];
+  // 1. Cargar Proyectos desde Firebase
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        // Intentamos ordenar por fecha (si existe el índice)
+        const q = query(
+          collection(db, "projects"),
+          orderBy("createdAt", "desc")
+        );
+        const querySnapshot = await getDocs(q);
+
+        const projectsData = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setProjects(projectsData);
+      } catch (error) {
+        console.error(
+          "Error cargando proyectos (posible falta de índice, cargando sin orden):",
+          error
+        );
+        // Fallback: Carga simple si falla el ordenamiento
+        const querySnapshot = await getDocs(collection(db, "projects"));
+        setProjects(
+          querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  // Función auxiliar para obtener las imágenes del modal
+  const getGallery = (project) => {
+    // Si tiene galería extra, úsala. Si no, usa la imagen principal.
+    if (project.gallery && project.gallery.length > 0) return project.gallery;
+    return [project.image];
+  };
 
   return (
-    <div className="min-h-[calc(100vh-80px)] p-4 md:p-10">
+    <div className="min-h-[calc(100vh-80px)] p-4 md:p-10 pb-20">
       <div className="text-center mb-12 animate-fade-in-up">
         <h2 className="text-4xl md:text-5xl font-serif text-brand-dark mb-2">
           Mis Proyectos
@@ -79,138 +75,181 @@ const Proyectos = () => {
         </p>
       </div>
 
-      {/* Grid de Proyectos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-        {projects.map((project) => (
-          <div
-            key={project.id}
-            onClick={() => setSelectedProject(project)}
-            className="group relative bg-white/30 backdrop-blur-md border border-white/40 rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
-          >
-            {/* Imagen Cover */}
-            <div className="h-56 overflow-hidden">
-              <img
-                src={project.cover}
-                alt={project.title}
-                className="w-full h-full object-cover transform group-hover:scale-110 transition duration-500"
-              />
-            </div>
-
-            {/* Contenido Card */}
-            <div className="p-6">
-              <div className="flex gap-2 mb-3 flex-wrap">
-                {project.tech.slice(0, 3).map((t, i) => (
-                  <span
-                    key={i}
-                    className="text-xs font-bold bg-brand-light text-brand-primary px-2 py-1 rounded-md"
-                  >
-                    {t}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <FaSpinner className="animate-spin text-4xl text-brand-primary" />
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="text-center text-gray-500 py-10 bg-white/30 backdrop-blur-sm rounded-xl border border-white/40">
+          <p>Aún no hay proyectos publicados.</p>
+          <p className="text-sm mt-2">(Súbelos desde el Panel de Admin)</p>
+        </div>
+      ) : (
+        /* Grid de Tarjetas */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          {projects.map((project) => (
+            <div
+              key={project.id}
+              onClick={() => setSelectedProject(project)}
+              className="group relative bg-white/40 backdrop-blur-md border border-white/50 rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 flex flex-col"
+            >
+              {/* Imagen Cover */}
+              <div className="h-56 overflow-hidden relative">
+                <img
+                  src={project.image}
+                  alt={project.title}
+                  className="w-full h-full object-cover transform group-hover:scale-110 transition duration-700"
+                />
+                <div className="absolute inset-0 bg-brand-dark/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                  <span className="text-white border border-white px-4 py-2 rounded-full font-bold flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition duration-300">
+                    <FaEye /> Ver Detalles
                   </span>
-                ))}
+                </div>
               </div>
-              <h3 className="text-2xl font-serif font-bold text-brand-dark mb-2 group-hover:text-brand-primary transition-colors">
-                {project.title}
-              </h3>
-              <p className="text-sm text-gray-700 line-clamp-2">
-                {project.description}
-              </p>
 
-              <div className="mt-4 flex items-center text-brand-primary font-bold text-sm">
-                VER DETALLES{" "}
-                <span className="ml-2 group-hover:translate-x-1 transition-transform">
-                  →
-                </span>
+              {/* Info */}
+              <div className="p-6 flex-1 flex flex-col">
+                <div className="flex gap-2 mb-3 flex-wrap">
+                  {/* Tags de tecnología (máx 3) */}
+                  {project.tech &&
+                    project.tech.slice(0, 3).map((t, i) => (
+                      <span
+                        key={i}
+                        className="text-[10px] font-bold bg-white/80 text-brand-primary px-2 py-1 rounded-md shadow-sm border border-brand-light"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  {project.tech && project.tech.length > 3 && (
+                    <span className="text-[10px] text-gray-500 px-1 py-1">
+                      +{project.tech.length - 3}
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="text-2xl font-serif font-bold text-brand-dark mb-2 group-hover:text-brand-primary transition-colors">
+                  {project.title}
+                </h3>
+
+                <p className="text-sm text-gray-700 line-clamp-2 mb-4 flex-grow">
+                  {project.description}
+                </p>
+
+                <div className="mt-auto pt-4 border-t border-white/30 flex items-center justify-between text-brand-primary font-bold text-xs uppercase tracking-wider">
+                  <span>{project.category}</span>
+                  <span className="group-hover:translate-x-1 transition-transform">
+                    Ver Proyecto →
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* MODAL DETALLE DE PROYECTO */}
+      {/* --- MODAL INTEGRADO --- */}
       {selectedProject && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          {/* Backdrop oscuro con blur */}
           <div
-            className="absolute inset-0 bg-brand-dark/60 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm transition-opacity"
             onClick={() => setSelectedProject(null)}
           ></div>
 
-          {/* Contenido del Modal */}
-          <div className="relative bg-white/90 backdrop-blur-xl border border-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-fade-in-up flex flex-col md:flex-row overflow-hidden">
-            {/* Botón Cerrar */}
+          <div className="relative bg-white w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden animate-fade-in-up">
+            {/* Botón Cerrar (Móvil) */}
             <button
               onClick={() => setSelectedProject(null)}
-              className="absolute top-4 right-4 z-10 p-2 bg-white/50 rounded-full hover:bg-red-500 hover:text-white transition-colors"
+              className="absolute top-4 right-4 z-20 md:hidden bg-white/80 p-2 rounded-full text-brand-dark shadow-sm"
             >
-              <FaTimes size={20} />
+              <FaTimes />
             </button>
 
-            {/* Columna Izquierda: Galería */}
-            <div className="w-full md:w-1/2 bg-gray-100 h-64 md:h-auto">
+            {/* IZQUIERDA: Galería Swiper */}
+            <div className="w-full md:w-3/5 bg-gray-100 relative h-64 md:h-auto group">
               <Swiper
-                pagination={{ clickable: true }}
+                pagination={{ clickable: true, dynamicBullets: true }}
                 navigation={true}
-                modules={[Pagination, Navigation]}
+                autoplay={{ delay: 4000, disableOnInteraction: false }}
+                modules={[Pagination, Navigation, Autoplay]}
                 className="h-full w-full"
               >
-                {selectedProject.gallery.map((img, idx) => (
-                  <SwiperSlide key={idx}>
+                {getGallery(selectedProject).map((img, idx) => (
+                  <SwiperSlide
+                    key={idx}
+                    className="flex items-center justify-center bg-gray-900"
+                  >
                     <img
                       src={img}
-                      alt={`Slide ${idx}`}
-                      className="w-full h-full object-cover"
+                      alt={`Vista ${idx + 1}`}
+                      className="w-full h-full object-contain"
                     />
                   </SwiperSlide>
                 ))}
               </Swiper>
             </div>
 
-            {/* Columna Derecha: Información */}
-            <div className="w-full md:w-1/2 p-8 flex flex-col">
-              <span className="text-brand-primary font-bold tracking-widest text-sm uppercase mb-2">
+            {/* DERECHA: Detalles */}
+            <div className="w-full md:w-2/5 p-8 flex flex-col bg-white">
+              <button
+                onClick={() => setSelectedProject(null)}
+                className="absolute top-4 right-4 hidden md:block text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <FaTimes size={24} />
+              </button>
+
+              <span className="text-brand-primary font-bold tracking-widest text-xs uppercase mb-2 bg-brand-light inline-block px-2 py-1 rounded w-fit">
                 {selectedProject.category}
               </span>
-              <h2 className="text-3xl font-serif font-bold text-brand-dark mb-4">
+
+              <h2 className="text-3xl font-serif font-bold text-brand-dark mb-4 leading-tight">
                 {selectedProject.title}
               </h2>
 
-              <p className="text-gray-700 mb-6 leading-relaxed flex-grow">
-                {selectedProject.description}
-              </p>
+              <div className="mb-6 flex-grow overflow-y-auto max-h-60 pr-2 custom-scrollbar">
+                <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-line">
+                  {selectedProject.description}
+                </p>
+              </div>
 
               <div className="mb-8">
-                <h4 className="font-bold text-brand-dark mb-2 flex items-center gap-2">
-                  <FaCode /> Tecnologías:
+                <h4 className="font-bold text-brand-dark mb-3 flex items-center gap-2 text-sm">
+                  <FaCode className="text-brand-primary" /> Tecnologías:
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {selectedProject.tech.map((t) => (
-                    <span
-                      key={t}
-                      className="px-3 py-1 bg-brand-light text-brand-dark rounded-full text-sm font-medium"
-                    >
-                      {t}
-                    </span>
-                  ))}
+                  {selectedProject.tech &&
+                    selectedProject.tech.map((t, i) => (
+                      <span
+                        key={i}
+                        className="px-3 py-1 bg-gray-100 text-brand-dark rounded-full text-xs font-semibold border border-gray-200"
+                      >
+                        {t}
+                      </span>
+                    ))}
                 </div>
               </div>
 
-              <div className="flex gap-4 mt-auto">
-                <a
-                  href={selectedProject.repoLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 border border-brand-dark text-brand-dark py-3 rounded-lg hover:bg-brand-dark hover:text-white transition-all"
-                >
-                  <FaGithub /> Código
-                </a>
-                <a
-                  href={selectedProject.demoLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 bg-brand-primary text-white py-3 rounded-lg hover:bg-brand-accent shadow-lg hover:shadow-brand-primary/50 transition-all"
-                >
-                  <FaExternalLinkAlt /> Demo
-                </a>
+              <div className="flex gap-4 mt-auto pt-4 border-t border-gray-100">
+                {selectedProject.repoLink && (
+                  <a
+                    href={selectedProject.repoLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 border border-brand-dark text-brand-dark py-3 rounded-xl hover:bg-brand-dark hover:text-white transition-all font-bold text-sm"
+                  >
+                    <FaGithub /> Código
+                  </a>
+                )}
+
+                {selectedProject.demoLink && (
+                  <a
+                    href={selectedProject.demoLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 bg-brand-primary text-white py-3 rounded-xl hover:bg-brand-accent shadow-lg hover:shadow-brand-primary/50 transition-all font-bold text-sm"
+                  >
+                    <FaExternalLinkAlt /> Demo
+                  </a>
+                )}
               </div>
             </div>
           </div>
