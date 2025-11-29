@@ -9,7 +9,7 @@ import Proyectos from "./pages/Proyectos";
 import Blog from "./pages/Blog";
 import Contacto from "./pages/Contacto";
 import Shop from "./pages/Shop";
-import Login from "./pages/admin/Login"; 
+import Login from "./pages/admin/login";
 import Dashboard from "./pages/admin/Dashboard";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
@@ -46,7 +46,9 @@ function App() {
   };
 
   return (
-    <PayPalScriptProvider options={paypalOptions}> {/* <--- ENVOLVER TODO */}
+    <PayPalScriptProvider options={paypalOptions}>
+      {" "}
+      {/* <--- ENVOLVER TODO */}
       <BrowserRouter>
         <Layout>
           <Routes>

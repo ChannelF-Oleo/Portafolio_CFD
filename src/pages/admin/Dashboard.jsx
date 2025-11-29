@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../../lib/firebase";
+// Agregamos updateDoc, deleteDoc y doc para modificar mensajes
 import {
   collection,
   addDoc,
   getDocs,
   orderBy,
   query,
+  updateDoc,
+  deleteDoc,
+  doc,
 } from "firebase/firestore";
 import { uploadFile } from "../../lib/storage";
+// Agregamos FaCheck y FaTrash
 import {
   FaPlus,
   FaSignOutAlt,
@@ -21,6 +26,9 @@ import {
   FaPenNib,
   FaImages,
   FaFileDownload,
+  FaCheck,
+  FaTrash,
+  FaEnvelopeOpenText,
 } from "react-icons/fa";
 
 const Dashboard = () => {
@@ -30,7 +38,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState([]);
 
-  // ESTADO DE FORMULARIO
+  // Estados del Formulario (Igual que antes)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -43,11 +51,9 @@ const Dashboard = () => {
     demoLink: "",
     content: "",
   });
-
-  // ESTADOS DE ARCHIVOS
-  const [mainImage, setMainImage] = useState(null); // Portada
-  const [galleryFiles, setGalleryFiles] = useState([]); // Galería
-  const [digitalFile, setDigitalFile] = useState(null); // <--- NUEVO: Archivo del producto (PDF/ZIP)
+  const [mainImage, setMainImage] = useState(null);
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const [digitalFile, setDigitalFile] = useState(null);
 
   useEffect(() => {
     if (!localStorage.getItem("isAdmin")) navigate("/admin");
@@ -69,11 +75,41 @@ const Dashboard = () => {
     navigate("/");
   };
 
+  // --- NUEVAS FUNCIONES PARA MENSAJES ---
+  const handleMarkAsRead = async (id, e) => {
+    e.stopPropagation(); // Evitar abrir si tuvieras un click en el div
+    try {
+      const msgRef = doc(db, "messages", id);
+      await updateDoc(msgRef, { read: true });
+
+      // Actualizar estado local para feedback inmediato
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === id ? { ...msg, read: true } : msg))
+      );
+    } catch (error) {
+      console.error("Error al marcar leído:", error);
+    }
+  };
+
+  const handleDeleteMessage = async (id, e) => {
+    e.stopPropagation();
+    if (!window.confirm("¿Estás segura de eliminar este mensaje?")) return;
+
+    try {
+      await deleteDoc(doc(db, "messages", id));
+      // Quitar de la lista local
+      setMessages((prev) => prev.filter((msg) => msg.id !== id));
+    } catch (error) {
+      console.error("Error al eliminar:", error);
+    }
+  };
+  // --------------------------------------
+
   const handleSubmit = async (e) => {
+    // ... (Mantén tu lógica de envío de formularios igual que antes) ...
     e.preventDefault();
     setLoading(true);
     try {
-      // 1. Subir Imagen Principal (Obligatoria)
       let mainImageUrl = "";
       if (mainImage) {
         mainImageUrl = await uploadFile(mainImage, formType);
@@ -83,23 +119,20 @@ const Dashboard = () => {
         return;
       }
 
-      // 2. Subir Archivo Digital (Solo si es Producto Digital)
       let digitalDownloadUrl = "";
       if (formType === "products" && formData.type === "Digital") {
-        if (digitalFile) {
-          // Lo subimos a una carpeta especial
+        if (digitalFile)
           digitalDownloadUrl = await uploadFile(
             digitalFile,
             "digital_products"
           );
-        } else {
-          alert("Debes subir el archivo digital (PDF, Zip...)");
+        else {
+          alert("Falta archivo digital");
           setLoading(false);
           return;
         }
       }
 
-      // 3. Subir Galería (Opcional)
       let galleryUrls = [];
       if (galleryFiles.length > 0) {
         const uploadPromises = Array.from(galleryFiles).map((file) =>
@@ -108,7 +141,6 @@ const Dashboard = () => {
         galleryUrls = await Promise.all(uploadPromises);
       }
 
-      // 4. Construir Objeto
       let dataToSave = {
         title: formData.title,
         image: mainImageUrl,
@@ -129,14 +161,11 @@ const Dashboard = () => {
         dataToSave.price = parseFloat(formData.price);
         dataToSave.category = formData.category;
         dataToSave.description = formData.description;
-        dataToSave.type = formData.type; // 'Digital', 'Fisico', 'Servicio'
+        dataToSave.type = formData.type;
         dataToSave.gallery = galleryUrls;
         dataToSave.reviews = [];
-
-        // Guardamos el link de descarga si es digital
-        if (formData.type === "Digital") {
+        if (formData.type === "Digital")
           dataToSave.fileUrl = digitalDownloadUrl;
-        }
       } else if (formType === "posts") {
         dataToSave.category = formData.category;
         dataToSave.content = formData.content;
@@ -145,11 +174,9 @@ const Dashboard = () => {
         dataToSave.comments = [];
       }
 
-      // 5. Guardar en DB
       await addDoc(collection(db, formType), dataToSave);
+      alert(`${formType} agregado!`);
 
-      alert(`${formType.toUpperCase()} agregado con éxito!`);
-      // Resetear todo
       setFormData({
         title: "",
         description: "",
@@ -164,14 +191,17 @@ const Dashboard = () => {
       });
       setMainImage(null);
       setGalleryFiles([]);
-      setDigitalFile(null); // Reset archivo digital
+      setDigitalFile(null);
       setActiveTab("overview");
     } catch (error) {
       console.error(error);
-      alert("Error: " + error.message);
+      alert(error.message);
     }
     setLoading(false);
   };
+
+  // Contar mensajes no leídos para el badge
+  const unreadCount = messages.filter((m) => !m.read).length;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans">
@@ -182,9 +212,14 @@ const Dashboard = () => {
         <div className="flex gap-4">
           <button
             onClick={() => setActiveTab("inbox")}
-            className="flex items-center gap-2 text-brand-primary bg-brand-light/30 px-4 py-2 rounded-full font-bold hover:bg-brand-light"
+            className="flex items-center gap-2 text-brand-primary bg-brand-light/30 px-4 py-2 rounded-full font-bold hover:bg-brand-light relative"
           >
-            <FaInbox /> Mensajes ({messages.length})
+            <FaInbox /> Mensajes
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                {unreadCount}
+              </span>
+            )}
           </button>
           <button
             onClick={handleLogout}
@@ -220,11 +255,12 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* VISTA BANDEJA MEJORADA */}
       {activeTab === "inbox" && (
-        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in-up">
+        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in-up border border-gray-100">
           <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-            <h3 className="font-bold text-lg text-gray-700">
-              Bandeja de Entrada
+            <h3 className="font-bold text-lg text-gray-700 flex items-center gap-2">
+              <FaEnvelopeOpenText /> Bandeja de Entrada
             </h3>
             <button onClick={() => setActiveTab("overview")}>
               <FaTimes />
@@ -235,19 +271,58 @@ const Dashboard = () => {
               <p className="p-10 text-center text-gray-400">Bandeja vacía.</p>
             ) : (
               messages.map((msg) => (
-                <div key={msg.id} className="p-6 hover:bg-blue-50 transition">
-                  <div className="flex justify-between mb-2">
-                    <span className="font-bold text-brand-dark">
-                      {msg.name}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {msg.date?.toDate().toLocaleDateString()}
-                    </span>
+                <div
+                  key={msg.id}
+                  className={`p-6 transition flex gap-4 ${
+                    msg.read
+                      ? "bg-gray-50 opacity-60"
+                      : "bg-white border-l-4 border-l-brand-primary"
+                  }`}
+                >
+                  {/* Contenido */}
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-2">
+                      <span
+                        className={`font-bold ${
+                          msg.read ? "text-gray-600" : "text-brand-dark"
+                        }`}
+                      >
+                        {msg.name}
+                      </span>
+                      <span className="text-xs text-gray-500 border border-gray-200 px-2 py-1 rounded">
+                        {msg.date?.toDate().toLocaleDateString()}
+                      </span>
+                    </div>
+                    <a
+                      href={`mailto:${msg.email}`}
+                      className="text-sm text-brand-primary font-bold hover:underline mb-2 block w-fit"
+                    >
+                      {msg.email}
+                    </a>
+                    <p className="text-gray-700 bg-white p-3 rounded-lg border border-gray-100 text-sm whitespace-pre-wrap shadow-sm">
+                      {msg.message}
+                    </p>
                   </div>
-                  <p className="text-sm text-brand-primary font-bold mb-2">
-                    {msg.email}
-                  </p>
-                  <p className="text-gray-700">{msg.message}</p>
+
+                  {/* Acciones */}
+                  <div className="flex flex-col gap-2 justify-start mt-1">
+                    {!msg.read && (
+                      <button
+                        onClick={(e) => handleMarkAsRead(msg.id, e)}
+                        title="Marcar como leído"
+                        className="p-2 text-green-600 hover:bg-green-100 rounded-full transition"
+                      >
+                        <FaCheck />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => handleDeleteMessage(msg.id, e)}
+                      title="Eliminar mensaje"
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -255,6 +330,7 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* VISTA CREATE (Igual que antes) */}
       {activeTab === "create" && (
         <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-xl animate-fade-in-up border border-gray-100">
           <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-100">
@@ -374,13 +450,10 @@ const Dashboard = () => {
                     />
                   </div>
                 </div>
-
-                {/* --- CAMPO DE CARGA PARA PRODUCTO DIGITAL --- */}
                 {formData.type === "Digital" && (
                   <div className="bg-purple-50 p-4 rounded-xl border border-dashed border-purple-300 relative animate-fade-in-up">
                     <label className="block text-sm font-bold text-purple-900 mb-2 flex items-center gap-2">
-                      <FaFileDownload /> Archivo Digital (PDF, Zip, Epub){" "}
-                      <span className="text-red-500">*</span>
+                      <FaFileDownload /> Archivo Digital (PDF, Zip) *
                     </label>
                     <input
                       required
@@ -388,15 +461,12 @@ const Dashboard = () => {
                       onChange={(e) => setDigitalFile(e.target.files[0])}
                       className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-purple-600 file:text-white hover:file:bg-purple-700 cursor-pointer"
                     />
-                    <p className="text-xs text-purple-600 mt-2 ml-1">
-                      Este archivo se enviará al cliente tras la compra.
-                    </p>
                   </div>
                 )}
               </>
             )}
 
-            {/* OTROS CAMPOS COMUNES */}
+            {/* OTROS CAMPOS */}
             {formType !== "certificates" && formType !== "products" && (
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -415,7 +485,6 @@ const Dashboard = () => {
             )}
 
             {formType === "projects" && (
-              // ... campos de proyecto ...
               <>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -451,7 +520,6 @@ const Dashboard = () => {
               </>
             )}
 
-            {/* DESCRIPCIÓN Y CONTENIDO */}
             {formType === "posts" ? (
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -491,7 +559,7 @@ const Dashboard = () => {
                   {formType === "certificates"
                     ? "Imagen del Certificado"
                     : "Imagen Principal"}{" "}
-                  <span className="text-red-500">*</span>
+                  *
                 </label>
                 <input
                   required
@@ -500,7 +568,6 @@ const Dashboard = () => {
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-brand-primary file:text-white hover:file:bg-brand-accent cursor-pointer"
                 />
               </div>
-
               {(formType === "projects" || formType === "products") && (
                 <div className="bg-blue-50 p-4 rounded-xl border border-dashed border-blue-300">
                   <label className="block text-sm font-bold text-brand-dark mb-2 flex items-center gap-2">
