@@ -65,7 +65,7 @@ const Footer = () => {
             </h3>
             <div className="flex gap-4">
               <a
-                href="#"
+                href="https://github.com/ChannelF-Oleo"
                 target="_blank"
                 rel="noreferrer"
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-brand-primary hover:text-white transition duration-300"
@@ -73,7 +73,7 @@ const Footer = () => {
                 <FaGithub size={20} />
               </a>
               <a
-                href="#"
+                href="www.linkedin.com/in/channel-feliz-de-oleo-86a12537b"
                 target="_blank"
                 rel="noreferrer"
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-brand-primary hover:text-white transition duration-300"
@@ -81,7 +81,7 @@ const Footer = () => {
                 <FaLinkedinIn size={20} />
               </a>
               <a
-                href="#"
+                href="https://www.instagram.com/channelf_oleo/"
                 target="_blank"
                 rel="noreferrer"
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-brand-primary hover:text-white transition duration-300"
