@@ -73,26 +73,26 @@ const Contacto = () => {
                 <h4 className="font-bold text-brand-dark">
                   Correo Electrónico
                 </h4>
-                <p className="text-gray-600">tucorreo@ejemplo.com</p>
+                <p className="text-gray-600">ChannelF.oleo@gmail.com</p>
               </div>
             </div>
           </div>
           <div className="flex gap-4">
             {/* Redes Sociales */}
             <a
-              href="#"
+              href="www.linkedin.com/in/channel-feliz-de-oleo-86a12537b"
               className="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center hover:bg-brand-primary transition transform hover:scale-110"
             >
               <FaLinkedinIn />
             </a>
             <a
-              href="#"
+              href="https://github.com/ChannelF-Oleo"
               className="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center hover:bg-black transition transform hover:scale-110"
             >
               <FaGithub />
             </a>
             <a
-              href="#"
+              href="https://wa.me/18094202288?"
               className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition transform hover:scale-110"
             >
               <FaWhatsapp />
