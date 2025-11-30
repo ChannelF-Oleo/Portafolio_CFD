@@ -10,7 +10,7 @@ const Navbar = () => {
   const cartItems = 0;
 
   const navLinks = [
-    { name: "Historia", path: "/" },
+    { name: "Home", path: "/" },
     { name: "Certificaciones", path: "/certificaciones" },
     { name: "Proyectos", path: "/proyectos" },
     { name: "Blog", path: "/blog" },
