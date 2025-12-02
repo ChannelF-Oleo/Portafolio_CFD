@@ -73,7 +73,7 @@ const Footer = () => {
                 <FaGithub size={20} />
               </a>
               <a
-                href="www.linkedin.com/in/channel-feliz-de-oleo-86a12537b"
+                href="https://www.linkedin.com/in/channel-feliz-de-oleo-86a12537b/"
                 target="_blank"
                 rel="noreferrer"
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-brand-primary hover:text-white transition duration-300"

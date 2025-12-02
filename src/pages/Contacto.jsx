@@ -80,7 +80,7 @@ const Contacto = () => {
           <div className="flex gap-4">
             {/* Redes Sociales */}
             <a
-              href="www.linkedin.com/in/channel-feliz-de-oleo-86a12537b"
+              href="https://www.linkedin.com/in/channel-feliz-de-oleo-86a12537b/"
               className="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center hover:bg-brand-primary transition transform hover:scale-110"
             >
               <FaLinkedinIn />
